@@ -136,11 +136,4 @@ project/
 - Pastikan backend **sudah berjalan** sebelum halaman HTML dipakai.
 - Jika frontend error CORS, jalankan FastAPI dengan CORS aktif.
 
----
 
-Jika mau, gue bisa bikinin:
-✅ README versi English  
-✅ README lengkap dengan screenshot  
-✅ README dengan badge GitHub
-
-Tinggal bilang aja! 🚀🔥
