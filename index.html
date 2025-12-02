@@ -1,0 +1,197 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <title>Prediksi Kolektibilitas</title>
+
+    <style>
+        body {
+            font-family: "Segoe UI", sans-serif;
+            background: #eef1f7;
+            padding: 30px;
+            display: flex;
+            justify-content: center;
+        }
+
+        .card {
+            width: 520px;
+            background: #fff;
+            padding: 25px;
+            border-radius: 15px;
+            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        h2 {
+            text-align: center;
+            margin-bottom: 15px;
+        }
+
+        .nav {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+
+        .nav a {
+            color: #0066ff;
+            text-decoration: none;
+            font-weight: bold;
+        }
+
+        .nav a:hover {
+            text-decoration: underline;
+        }
+
+        .field {
+            margin-top: 18px;
+        }
+
+        .label-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        label {
+            font-weight: 600;
+        }
+
+        .tooltip-icon {
+            background: #007bff;
+            color: white;
+            width: 18px;
+            height: 18px;
+            display: inline-flex;
+            justify-content: center;
+            align-items: center;
+            border-radius: 50%;
+            font-size: 12px;
+            cursor: pointer;
+        }
+
+        .tooltip {
+            visibility: hidden;
+            background-color: #333;
+            color: #fff;
+            padding: 6px 10px;
+            border-radius: 6px;
+            position: absolute;
+            z-index: 1;
+            font-size: 12px;
+            margin-top: 4px;
+            width: 250px;
+        }
+
+        .tooltip-icon:hover + .tooltip {
+            visibility: visible;
+        }
+
+        input {
+            width: 100%;
+            margin-top: 8px;
+            padding: 10px;
+            border-radius: 8px;
+            border: 1px solid #ccc;
+            font-size: 15px;
+        }
+
+        button {
+            margin-top: 25px;
+            width: 100%;
+            padding: 12px;
+            background: #0066ff;
+            color: white;
+            border: none;
+            border-radius: 10px;
+            font-size: 17px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+
+        .result {
+            margin-top: 25px;
+            padding: 15px;
+            border-radius: 10px;
+            font-size: 20px;
+            display: none;
+            text-align: center;
+            font-weight: 600;
+        }
+
+        .risk-1 { background: #d4fcd4; color: #0b7a0b; }
+        .risk-2 { background: #e8fcd4; color: #547a0b; }
+        .risk-3 { background: #fff6c7; color: #8a6d00; }
+        .risk-4 { background: #ffe0c7; color: #a64900; }
+        .risk-5 { background: #ffd1d1; color: #b40000; }
+    </style>
+
+</head>
+<body>
+
+<div class="card">
+
+    <div class="nav">
+        <a href="penjelasan.html">Penjelasan Prediksi</a>
+    </div>
+
+    <h2>Prediksi Kolektibilitas Nasabah</h2>
+
+    <form id="predictForm"></form>
+    <button onclick="predict()">Prediksi Sekarang</button>
+
+    <div id="result" class="result"></div>
+</div>
+
+<script>
+    const featureInfo = {
+        "TOTAL POKOK": "Total pinjaman awal yang diberikan kepada nasabah.",
+        "OS POKOK": "Sisa pokok yang belum dibayar.",
+        "TUNGGAKAN POKOK": "Jumlah pokok yang menunggak.",
+        "JUMLAH HARI TUNGGAKAN": "Total hari keterlambatan bayar.",
+        "EIR": "Effective Interest Rate.",
+        "TUNGGAKAN BUNGA": "Jumlah bunga menunggak.",
+        "UTILIZE RATE": "Persentase penggunaan limit kredit.",
+        "STAGE_Stage 2": "1 = risiko meningkat, 0 = normal.",
+        "STAGE_Stage 3": "1 = macet (NPL), 0 = tidak."
+    };
+
+    const featureCols = Object.keys(featureInfo);
+    const form = document.getElementById("predictForm");
+
+    featureCols.forEach(col => {
+        form.innerHTML += `
+            <div class="field">
+                <div class="label-row">
+                    <label>${col}</label>
+                    <div class="tooltip-icon">i</div>
+                    <div class="tooltip">${featureInfo[col]}</div>
+                </div>
+                <input type="number" id="${col}" placeholder="Masukkan ${col}">
+            </div>
+        `;
+    });
+
+    function getRiskClass(pred) {
+        return `risk-${pred}`;
+    }
+
+    async function predict() {
+        const data = {};
+        featureCols.forEach(col => data[col] = parseFloat(document.getElementById(col).value) || 0);
+
+        const response = await fetch("http://127.0.0.1:8000/predict", {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ data })
+        });
+
+        const result = await response.json();
+
+        const box = document.getElementById("result");
+        box.style.display = "block";
+        box.className = "result " + getRiskClass(result.prediction);
+        box.innerHTML = `Hasil Prediksi: <b>${result.prediction}</b>`;
+    }
+</script>
+
+</body>
+</html>
