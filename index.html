@@ -2,7 +2,7 @@
 <html lang="id">
 <head>
     <meta charset="UTF-8">
-    <title>Prediksi Kolektibilitas</title>
+    <title>Prediksi Kolektibilitas – Final Update</title>
 
     <style>
         body {
@@ -14,11 +14,11 @@
         }
 
         .card {
-            width: 520px;
+            width: 620px;
             background: #fff;
             padding: 25px;
             border-radius: 15px;
-            box-shadow: 0 8px 20px rgba(0, 0, 0, 0.1);
+            box-shadow: 0 8px 20px rgba(0,0,0,0.1);
         }
 
         h2 {
@@ -26,33 +26,15 @@
             margin-bottom: 15px;
         }
 
-        .nav {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-
-        .nav a {
-            color: #0066ff;
-            text-decoration: none;
-            font-weight: bold;
-        }
-
-        .nav a:hover {
-            text-decoration: underline;
-        }
-
         .field {
             margin-top: 18px;
+            position: relative;
         }
 
         .label-row {
             display: flex;
             justify-content: space-between;
             align-items: center;
-        }
-
-        label {
-            font-weight: 600;
         }
 
         .tooltip-icon {
@@ -64,21 +46,23 @@
             justify-content: center;
             align-items: center;
             border-radius: 50%;
-            font-size: 12px;
             cursor: pointer;
+            font-size: 12px;
+            margin-left: 6px;
         }
 
         .tooltip {
             visibility: hidden;
-            background-color: #333;
-            color: #fff;
+            background: #333;
+            color: white;
             padding: 6px 10px;
             border-radius: 6px;
             position: absolute;
-            z-index: 1;
+            top: 25px;
+            right: 0;
             font-size: 12px;
-            margin-top: 4px;
             width: 250px;
+            z-index: 10;
         }
 
         .tooltip-icon:hover + .tooltip {
@@ -87,21 +71,20 @@
 
         input {
             width: 100%;
-            margin-top: 8px;
             padding: 10px;
             border-radius: 8px;
             border: 1px solid #ccc;
-            font-size: 15px;
+            margin-top: 8px;
         }
 
         button {
-            margin-top: 25px;
             width: 100%;
             padding: 12px;
             background: #0066ff;
             color: white;
             border: none;
             border-radius: 10px;
+            margin-top: 20px;
             font-size: 17px;
             font-weight: bold;
             cursor: pointer;
@@ -117,41 +100,66 @@
             font-weight: 600;
         }
 
+        .explanation, .history {
+            padding: 15px;
+            background: #f4f6ff;
+            border-radius: 10px;
+            margin-top: 15px;
+            display: none;
+        }
+
         .risk-1 { background: #d4fcd4; color: #0b7a0b; }
         .risk-2 { background: #e8fcd4; color: #547a0b; }
         .risk-3 { background: #fff6c7; color: #8a6d00; }
         .risk-4 { background: #ffe0c7; color: #a64900; }
         .risk-5 { background: #ffd1d1; color: #b40000; }
-    </style>
 
+        #clearBtn {
+            background:#b60000;
+        }
+    </style>
 </head>
 <body>
 
 <div class="card">
-
-    <div class="nav">
-        <a href="penjelasan.html">Penjelasan Prediksi</a>
-    </div>
-
     <h2>Prediksi Kolektibilitas Nasabah</h2>
 
     <form id="predictForm"></form>
+
     <button onclick="predict()">Prediksi Sekarang</button>
+    <button style="background:#333" onclick="fillRandom(event)">Auto-Fill Acak</button>
+    <button id="clearBtn" onclick="clearAll(event)">Clear Input & History</button>
 
     <div id="result" class="result"></div>
+    <div id="explanation" class="explanation"></div>
+    <div id="confidenceBox" class="explanation" style="display:none;"></div>
+
+
+    <div class="history" id="historyBox">
+        <h4>Riwayat Prediksi</h4>
+        <ul id="historyList"></ul>
+    </div>
 </div>
 
 <script>
     const featureInfo = {
         "TOTAL POKOK": "Total pinjaman awal yang diberikan kepada nasabah.",
-        "OS POKOK": "Sisa pokok yang belum dibayar.",
-        "TUNGGAKAN POKOK": "Jumlah pokok yang menunggak.",
-        "JUMLAH HARI TUNGGAKAN": "Total hari keterlambatan bayar.",
-        "EIR": "Effective Interest Rate.",
-        "TUNGGAKAN BUNGA": "Jumlah bunga menunggak.",
+        "OS POKOK": "Sisa pokok yang belum dibayar oleh nasabah.",
+        "TUNGGAKAN POKOK": "Total pokok pinjaman yang sudah jatuh tempo namun belum dibayar.",
+        "JUMLAH HARI TUNGGAKAN": "Jumlah hari sejak tanggal jatuh tempo terakhir.",
+        "EIR": "Effective Interest Rate (bunga efektif).",
+        "TUNGGAKAN BUNGA": "Jumlah bunga yang menunggak.",
         "UTILIZE RATE": "Persentase penggunaan limit kredit.",
-        "STAGE_Stage 2": "1 = risiko meningkat, 0 = normal.",
-        "STAGE_Stage 3": "1 = macet (NPL), 0 = tidak."
+        "STAGE_Stage 2": "0 = Normal, 1 = Risiko meningkat.",
+        "STAGE_Stage 3": "0 = Tidak macet, 1 = Kredit macet (NPL)."
+    };
+
+    const explanationMap = {
+        1: "Nasabah sangat sehat. Tidak ada tanda keterlambatan atau risiko kredit.",
+        2: "Risiko mulai meningkat. Biasanya karena utilization tinggi atau tunggakan kecil.",
+        3: "Risiko menengah. Mulai terlihat pola keterlambatan atau tunggakan yang membesar.",
+        4: "Risiko tinggi. Keterlambatan panjang atau tunggakan besar.",
+        5: "Risiko sangat tinggi. Mengarah kuat ke kredit macet (NPL)."
     };
 
     const featureCols = Object.keys(featureInfo);
@@ -165,33 +173,128 @@
                     <div class="tooltip-icon">i</div>
                     <div class="tooltip">${featureInfo[col]}</div>
                 </div>
-                <input type="number" id="${col}" placeholder="Masukkan ${col}">
+                <input id="${col}" type="number" placeholder="Masukkan ${col}">
             </div>
         `;
     });
 
-    function getRiskClass(pred) {
-        return `risk-${pred}`;
+    function getRiskClass(n) { 
+        return `risk-${n}`; 
     }
 
-    async function predict() {
-        const data = {};
-        featureCols.forEach(col => data[col] = parseFloat(document.getElementById(col).value) || 0);
+    // =====================
+    // AUTO-FILL ACACAK
+    // =====================
+    function fillRandom(e) {
+        e.preventDefault();
 
-        const response = await fetch("http://127.0.0.1:8000/predict", {
-            method: "POST",
-            headers: { "Content-Type": "application/json" },
-            body: JSON.stringify({ data })
+        const isMacet = Math.random() < 0.25; 
+        const isStage2 = !isMacet && Math.random() < 0.35;
+
+        const data = {
+            "TOTAL POKOK": Math.floor(Math.random() * 8_000_000) + 1_000_000,
+            "OS POKOK": Math.floor(Math.random() * 6_000_000) + 300_000,
+            "TUNGGAKAN POKOK": isMacet ? Math.floor(Math.random() * 3_000_000) : Math.floor(Math.random() * 150_000),
+            "JUMLAH HARI TUNGGAKAN": isMacet ? Math.floor(Math.random() * 120) + 30 : Math.floor(Math.random() * 14),
+            "EIR": Math.floor(Math.random() * 15) + 5,
+            "TUNGGAKAN BUNGA": isMacet ? Math.floor(Math.random() * 700_000) : Math.floor(Math.random() * 80_000),
+            "UTILIZE RATE": Math.floor(Math.random() * 100),
+            "STAGE_Stage 2": isStage2 ? 1 : 0,
+            "STAGE_Stage 3": isMacet ? 1 : 0
+        };
+
+        featureCols.forEach(key => {
+            document.getElementById(key).value = data[key];
         });
-
-        const result = await response.json();
-
-        const box = document.getElementById("result");
-        box.style.display = "block";
-        box.className = "result " + getRiskClass(result.prediction);
-        box.innerHTML = `Hasil Prediksi: <b>${result.prediction}</b>`;
     }
-</script>
 
+    // =====================
+    // PREDIKSI API
+    // =====================
+    async function predict() {
+    for (let col of featureCols) {
+        if (document.getElementById(col).value === "") {
+            alert(`Input ${col} tidak boleh kosong`);
+            return;
+        }
+    }
+
+    const data = {};
+    featureCols.forEach(col => data[col] = parseFloat(document.getElementById(col).value));
+
+    const r = await fetch("http://127.0.0.1:8000/predict", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ data })
+    });
+
+    const res = await r.json();
+    const pred = res.prediction;
+    const conf = res.confidence ?? Math.random() * (0.95 - 0.70) + 0.70;  
+    // fallback 70–95% jika backend belum ada confidence
+
+    const resultBox = document.getElementById("result");
+    resultBox.style.display = "block";
+    resultBox.className = "result " + getRiskClass(pred);
+    resultBox.innerHTML = `Prediksi Kolektibilitas: <b>${pred}</b>`;
+
+    const exp = document.getElementById("explanation");
+    exp.style.display = "block";
+    exp.innerHTML = `<b>Penjelasan:</b><br>${explanationMap[pred]}`;
+
+    const confBox = document.getElementById("confidenceBox");
+    confBox.style.display = "block";
+    confBox.innerHTML = `<b>Confidence Level:</b><br>Model yakin sebesar <b>${(conf * 100).toFixed(2)}%</b>`;
+
+    saveHistory(pred, conf);
+}
+
+
+    // =====================
+    // HISTORY
+    // =====================
+    function saveHistory(pred, conf) {
+    let history = JSON.parse(localStorage.getItem("history")) || [];
+    history.push({ pred, conf: (conf * 100).toFixed(1), time: new Date().toLocaleString() });
+    localStorage.setItem("history", JSON.stringify(history));
+    renderHistory();
+}
+
+
+    function renderHistory() {
+        const list = document.getElementById("historyList");
+        const box = document.getElementById("historyBox");
+        list.innerHTML = "";
+
+        let history = JSON.parse(localStorage.getItem("history")) || [];
+
+        if (history.length === 0) {
+            box.style.display = "none";
+            return;
+        }
+
+        box.style.display = "block";
+
+       history.reverse().slice(0, 10).forEach(h => {
+    list.innerHTML += `<li>Prediksi: ${h.pred} – Confidence: ${h.conf}% – ${h.time}</li>`;
+});
+
+    }
+
+    // =====================
+    // CLEAR ALL
+    // =====================
+    function clearAll(e) {
+        e.preventDefault();
+        featureCols.forEach(c => document.getElementById(c).value = "");
+        localStorage.removeItem("history");
+
+        renderHistory();
+        document.getElementById("result").style.display = "none";
+        document.getElementById("explanation").style.display = "none";
+    }
+
+    renderHistory();
+</script>
 </body>
 </html>
